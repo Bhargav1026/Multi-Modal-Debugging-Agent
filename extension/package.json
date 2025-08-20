@@ -1,0 +1,23 @@
+{
+  "name": "multi-modal-debugging-agent",
+  "displayName": "Multi-Modal Debugging Agent",
+  "publisher": "your-publisher-id",
+  "version": "0.0.1",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "main": "./out/extension.js",
+  "activationEvents": ["onCommand:multiModalDebug.helloWorld"],
+  "contributes": {
+    "commands": [
+      { "command": "multiModalDebug.helloWorld", "title": "Multi-Modal Debug: Hello World" }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.0.0"
+  }
+}
