@@ -2,18 +2,109 @@
   "name": "multi-modal-debugging-agent",
   "displayName": "Multi-Modal Debugging Agent",
   "publisher": "your-publisher-id",
-  "version": "0.0.1",
+  "version": "0.1.1",
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Other"],
   "main": "./out/extension.js",
-  "activationEvents": ["onCommand:multiModalDebug.helloWorld"],
+  "activationEvents": [
+    "onCommand:multiModalDebug.openChat",
+    "onCommand:multiModalDebug.readFile",
+    "onCommand:multiModalDebug.writeFile",
+    "onCommand:multiModalDebug.overwriteFile",
+    "onCommand:multiModalDebug.analyzeBackend",
+    "onCommand:multiModalDebug.analyzeActive",
+    "onCommand:multiModalDebug.copyAnalysis",
+    "onCommand:multiModalDebug.saveAnalysis"
+  ],
   "contributes": {
     "commands": [
-      { "command": "multiModalDebug.helloWorld", "title": "Multi-Modal Debug: Hello World" }
+      { "command": "multiModalDebug.openChat", "title": "OurProject-1: Open Side Chat", "category": "OurProject-1" },
+      { "command": "multiModalDebug.readFile", "title": "OurProject-1: Read File", "category": "OurProject-1" },
+      { "command": "multiModalDebug.writeFile", "title": "OurProject-1: Write File", "category": "OurProject-1" },
+      { "command": "multiModalDebug.overwriteFile", "title": "OurProject-1: Overwrite File", "category": "OurProject-1" },
+      { "command": "multiModalDebug.analyzeBackend", "title": "OurProject-1: Analyze via Backend", "category": "OurProject-1" },
+      { "command": "multiModalDebug.analyzeActive", "title": "OurProject-1: Analyze Active Editor", "category": "OurProject-1" },
+      { "command": "multiModalDebug.copyAnalysis", "title": "OurProject-1: Copy Analysis", "category": "OurProject-1" },
+      { "command": "multiModalDebug.saveAnalysis", "title": "OurProject-1: Save Analysis", "category": "OurProject-1" }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Multi-Modal Debugging Agent",
+      "properties": {
+        "multiModalDebug.backendBase": {
+          "type": "string",
+          "default": "http://127.0.0.1:8000",
+          "description": "Base URL of the FastAPI backend (e.g., http://127.0.0.1:8000)."
+        },
+        "multiModalDebug.maxPayload": {
+          "type": "number",
+          "default": 2097152,
+          "description": "Maximum number of bytes to send to the backend when analyzing a file (default: ~2MB)."
+        },
+        "multiModalDebug.notebookStrategy": {
+          "type": "string",
+          "enum": ["cells", "raw"],
+          "default": "cells",
+          "description": "How to gather content from .ipynb notebooks: `cells` (only code/text cells) or `raw` (entire JSON)."
+        },
+        "multiModalDebug.backendUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "DEPRECATED: Use `multiModalDebug.backendBase` instead. If set, it overrides `backendBase` for backward compatibility."
+        }
+      }
+    },
+    "menus": {
+      "editor/title": [
+        {
+          "command": "multiModalDebug.analyzeActive",
+          "group": "navigation@1",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "multiModalDebug.openChat",
+          "group": "navigation@9"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "multiModalDebug.analyzeActive",
+          "group": "navigation",
+          "when": "editorTextFocus"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "multiModalDebug.openChat",
+        "mac": "shift+cmd+alt+o",
+        "when": "true"
+      },
+      {
+        "command": "multiModalDebug.analyzeActive",
+        "mac": "shift+cmd+alt+a",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "multiModalDebug.analyzeBackend",
+        "mac": "shift+cmd+alt+l",
+        "when": "true"
+      },
+      {
+        "command": "multiModalDebug.copyAnalysis",
+        "mac": "shift+cmd+alt+c",
+        "when": "true"
+      },
+      {
+        "command": "multiModalDebug.saveAnalysis",
+        "mac": "shift+cmd+alt+r",
+        "when": "true"
+      }
     ]
   },
   "scripts": {
-    "compile": "tsc -p ."
+    "compile": "tsc -p .",
+    "watch": "tsc -w -p ."
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

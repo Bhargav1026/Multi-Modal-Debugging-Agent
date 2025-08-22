@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api import router as api_router
+from app.api import api_router
 
 app = FastAPI(title="Multi-Modal Debugging Agent")
 
