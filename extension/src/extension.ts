@@ -182,10 +182,24 @@ export function activate(context: vscode.ExtensionContext) {
       await ChatPanel.postMessage({ type: "savePatch" });
     })
   );
+  // NEW: Apply Patch
+  context.subscriptions.push(
+    vscode.commands.registerCommand("multiModalDebug.applyPatch", async () => {
+      ChatPanel.createOrShow(context);
+      await ChatPanel.postMessage({ type: "applyPatch" });
+    })
+  );
   context.subscriptions.push(
     vscode.commands.registerCommand("multiModalDebug.saveTest", async () => {
       ChatPanel.createOrShow(context);
       await ChatPanel.postMessage({ type: "saveTest" });
+    })
+  );
+  // NEW: Insert Test
+  context.subscriptions.push(
+    vscode.commands.registerCommand("multiModalDebug.insertTest", async () => {
+      ChatPanel.createOrShow(context);
+      await ChatPanel.postMessage({ type: "insertTest" });
     })
   );
   context.subscriptions.push(
@@ -198,6 +212,22 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("multiModalDebug.clearHistory", async () => {
       ChatPanel.createOrShow(context);
       await ChatPanel.postMessage({ type: "clearHistory" });
+    })
+  );
+
+  // Runner: Run Tests from backend
+  context.subscriptions.push(
+    vscode.commands.registerCommand("multiModalDebug.runTests", async () => {
+      ChatPanel.createOrShow(context);
+      await ChatPanel.postMessage({ type: "runTests" });
+    })
+  );
+
+  // Runner: Run arbitrary shell command on backend
+  context.subscriptions.push(
+    vscode.commands.registerCommand("multiModalDebug.runCommand", async () => {
+      ChatPanel.createOrShow(context);
+      await ChatPanel.postMessage({ type: "runCommand" });
     })
   );
 }
@@ -311,6 +341,33 @@ async function analyzeWithBackend(logText: string): Promise<any> {
   return analyzeWithBackendPayload({ repo: ".", log: logText, screenshot_b64: null });
 }
 
+/** Runner helpers */
+async function runnerPytest(payload: { path: string; quiet?: boolean }): Promise<any> {
+  const res = await fetch(`${getBackendBase()}/api/v1/runner/pytest`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errTxt = await res.text().catch(() => "");
+    throw new Error(`Runner pytest ${res.status}: ${errTxt || res.statusText}`);
+  }
+  return res.json();
+}
+
+async function runnerRun(payload: { cmd: string; cwd?: string; shell?: boolean }): Promise<any> {
+  const res = await fetch(`${getBackendBase()}/api/v1/runner/run`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errTxt = await res.text().catch(() => "");
+    throw new Error(`Runner run ${res.status}: ${errTxt || res.statusText}`);
+  }
+  return res.json();
+}
+
 function makeIncidentMarkdown(data: any, sourcePath?: string): string {
   const rca = typeof data === "string" ? data : data?.rca ?? data;
   const patch = data?.patch ?? null;
@@ -399,9 +456,14 @@ type PanelMsg =
   | { type: "openLocation" }
   | { type: "previewReport" }
   | { type: "savePatch" }
+  | { type: "applyPatch" }   // added
   | { type: "saveTest" }
+  | { type: "insertTest" }   // added
   | { type: "historyPrev" }
-  | { type: "historyNext" };
+  | { type: "historyNext" }
+  | { type: "runTests" }
+  | { type: "runCommand" }
+  | { type: "runnerResult"; body: any };
 
 class ChatPanel {
   static readonly viewType = "multiModalDebug.chat";
@@ -467,6 +529,59 @@ class ChatPanel {
       async (msg: PanelMsg) => {
         try {
           switch (msg?.type) {
+            case "runTests": {
+              // Pick a sensible default tests path (backend runs with CWD=backend/)
+              const ws = vscode.workspace.workspaceFolders?.[0]?.uri;
+              let defaultPath = "../tests/backend";
+              try {
+                if (ws) {
+                  // Prefer repo-level tests/backend if present
+                  await vscode.workspace.fs.stat(vscode.Uri.joinPath(ws, "tests", "backend"));
+                  defaultPath = "../tests/backend";
+                }
+              } catch {
+                try {
+                  if (ws) {
+                    await vscode.workspace.fs.stat(vscode.Uri.joinPath(ws, "backend", "tests"));
+                    defaultPath = "tests";
+                  }
+                } catch {}
+              }
+
+              const path = await vscode.window.showInputBox({
+                prompt: "Pytest path (relative to backend working dir)",
+                value: defaultPath,
+                placeHolder: "../tests/backend or tests",
+              });
+              if (!path) { this.status("runTests:cancelled"); break; }
+
+              await vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Notification, title: "Running tests…" },
+                async () => {
+                  const out = await runnerPytest({ path, quiet: true });
+                  this.panel.webview.postMessage({ type: "runnerResult", body: out });
+                  this.status("runTests: done");
+                }
+              );
+              break;
+            }
+
+            case "runCommand": {
+              const cmd = await vscode.window.showInputBox({
+                prompt: "Shell command to run on backend",
+                value: "pytest -q",
+              });
+              if (!cmd) { this.status("runCommand:cancelled"); break; }
+              await vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Notification, title: "Running command…" },
+                async () => {
+                  const out = await runnerRun({ cmd, shell: true });
+                  this.panel.webview.postMessage({ type: "runnerResult", body: out });
+                  this.status("runCommand: done");
+                }
+              );
+              break;
+            }
             case "copyRCA": {
               const body = this.lastAnalysis?.body;
               const rcaText = typeof body?.rca === "string" ? body.rca : (body?.rca ? JSON.stringify(body.rca, null, 2) : undefined);
@@ -601,7 +716,7 @@ class ChatPanel {
                 }
                 if (!docUri) { this.status("openLocation: file not found in workspace"); break; }
                 const doc = await vscode.workspace.openTextDocument(docUri);
-                const ed = await vscode.window.showTextDocument(doc, { preview: false });
+                const ed = await vscode.window.showTextDocument(doc, { preview: true });
                 const pos = new vscode.Position(Math.max(0, line), 0);
                 ed.selection = new vscode.Selection(pos, pos);
                 ed.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
@@ -614,7 +729,7 @@ class ChatPanel {
               if (!this.lastAnalysis?.body) { this.status("preview: no analysis"); break; }
               const md = makeIncidentMarkdown(this.lastAnalysis.body, this.lastAnalysis.path);
               const doc = await vscode.workspace.openTextDocument({ content: md, language: "markdown" });
-              await vscode.window.showTextDocument(doc, { preview: false });
+              await vscode.window.showTextDocument(doc, { preview: true });
               this.status("preview: opened Markdown report");
               break;
             }
@@ -635,6 +750,48 @@ class ChatPanel {
               this.status("patch: saved");
               break;
             }
+            // --- inserted new cases for applyPatch and insertTest ---
+            case "applyPatch": {
+              const patch = this.lastAnalysis?.body?.patch;
+              if (!patch) { this.status("apply-patch: none available"); break; }
+              const ws = vscode.workspace.workspaceFolders?.[0]?.uri;
+              if (!ws) { this.status("apply-patch: no workspace open"); break; }
+              const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
+              const patchesDir = vscode.Uri.joinPath(ws, "patches");
+              try { await vscode.workspace.fs.createDirectory(patchesDir); } catch {}
+              const patchUri = vscode.Uri.joinPath(patchesDir, `suggested_${stamp}.patch`);
+              await vscode.workspace.fs.writeFile(patchUri, Buffer.from(String(patch)));
+              const term = vscode.window.createTerminal({ name: "OurProject-1: apply patch", cwd: ws.fsPath });
+              term.show();
+              term.sendText(`git apply --reject --whitespace=fix "${patchUri.fsPath}"`);
+              vscode.window.showInformationMessage(`Saved patch → ${patchUri.fsPath}. Running 'git apply' in terminal.`);
+              this.status("apply-patch: invoked git apply");
+              break;
+            }
+            case "insertTest": {
+              const test = this.lastAnalysis?.body?.test;
+              if (!test) { this.status("insert-test: none available"); break; }
+              const ws = vscode.workspace.workspaceFolders?.[0]?.uri;
+              let target: vscode.Uri | undefined;
+              const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
+              if (ws) {
+                // Prefer backend/tests if it exists; else tests/
+                let testsDir = vscode.Uri.joinPath(ws, "backend", "tests");
+                try { await vscode.workspace.fs.stat(testsDir); } catch { testsDir = vscode.Uri.joinPath(ws, "tests"); }
+                try { await vscode.workspace.fs.createDirectory(testsDir); } catch {}
+                target = vscode.Uri.joinPath(testsDir, `rca_test_${stamp}.py`);
+              } else {
+                target = await vscode.window.showSaveDialog({ saveLabel: "Save Test", filters: { Python: ["py"], All: ["*"] } });
+                if (!target) { this.status("insert-test:cancelled"); break; }
+              }
+              await vscode.workspace.fs.writeFile(target!, Buffer.from(String(test)));
+              const doc = await vscode.workspace.openTextDocument(target!);
+              await vscode.window.showTextDocument(doc, { preview: true });
+              vscode.window.showInformationMessage(`Inserted test → ${target!.fsPath}`);
+              this.status("insert-test: saved & opened");
+              break;
+            }
+            // --- end new cases ---
             case "saveTest": {
               const test = this.lastAnalysis?.body?.test;
               if (!test) { this.status("test: none available"); break; }
@@ -826,7 +983,11 @@ class ChatPanel {
       <button id="btn-copy-rca">Copy RCA</button>
       <button id="btn-save">Save Report</button>
       <button id="btn-save-patch">Save Patch</button>
+      <button id="btn-apply-patch">Apply Patch</button>
       <button id="btn-save-test">Save Test</button>
+      <button id="btn-insert-test">Insert Test</button>
+      <button id="btn-run-tests">Run Tests</button>
+      <button id="btn-run-cmd">Run Cmd</button>
       <button id="btn-clear">Clear</button>
       <label style="margin-left:auto; display:flex; align-items:center; gap:6px;">
         <input type="checkbox" id="opt-send-path">
@@ -908,8 +1069,14 @@ class ChatPanel {
     document.getElementById('btn-save-patch').addEventListener('click', () => {
       vscode.postMessage({ type: 'savePatch' });
     });
+    document.getElementById('btn-apply-patch').addEventListener('click', () => {
+      vscode.postMessage({ type: 'applyPatch' });
+    });
     document.getElementById('btn-save-test').addEventListener('click', () => {
       vscode.postMessage({ type: 'saveTest' });
+    });
+    document.getElementById('btn-insert-test').addEventListener('click', () => {
+      vscode.postMessage({ type: 'insertTest' });
     });
     document.getElementById('btn-clear').addEventListener('click', () => {
       out.value = '';
@@ -925,9 +1092,17 @@ class ChatPanel {
     window.addEventListener('message', (event) => {
       const msg = event.data || {};
       // Clear busy overlay on any message that represents completion or error
-      if (['analysisResult', 'error', 'status'].includes(msg.type)) {
+      if (['analysisResult', 'runnerResult', 'error', 'status'].includes(msg.type)) {
         setBusy(false);
       }
+    document.getElementById('btn-run-tests').addEventListener('click', () => {
+      setBusy(true);
+      vscode.postMessage({ type: 'runTests' });
+    });
+    document.getElementById('btn-run-cmd').addEventListener('click', () => {
+      setBusy(true);
+      vscode.postMessage({ type: 'runCommand' });
+    });
       if (msg.type === 'status') { log('[status] ' + msg.message); return; }
       if (msg.type === 'error')  { log('[error] '  + msg.message); return; }
       if (msg.type === 'fileContent') {
@@ -957,6 +1132,13 @@ class ChatPanel {
         }
         text += '\\n---\\nRaw JSON:\\n' + JSON.stringify(b, null, 2);
 
+        out.value = text;
+        return;
+      }
+      if (msg.type === 'runnerResult') {
+        const b = msg.body || {};
+        let text = '🧪 Runner Result\\n';
+        text += JSON.stringify(b, null, 2);
         out.value = text;
         return;
       }

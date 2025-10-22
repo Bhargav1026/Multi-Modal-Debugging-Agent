@@ -1,0 +1,5 @@
+2025-09-18 10:02:14,120 INFO  api  request_id=9f2a  GET /login 200 in 12ms
+2025-09-18 10:02:14,538 ERROR db   request_id=9f2a  psycopg2.OperationalError: could not connect to server: Connection refused
+2025-09-18 10:02:14,539 WARN  svc  request_id=9f2a  retrying db connection (1/3)...
+2025-09-18 10:02:15,550 ERROR db   request_id=9f2a  timeout acquiring connection from pool
+2025-09-18 10:02:15,560 ERROR api  request_id=9f2a  500 Internal Server Error path=/login

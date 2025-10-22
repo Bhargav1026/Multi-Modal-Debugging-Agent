@@ -177,6 +177,46 @@ function activate(context) {
         vscode.window.showInformationMessage(`Wrote ${uri.fsPath}`);
         ChatPanel.postMessage({ type: "fileWritten", path: uri.fsPath, body: content });
     }));
+    // Analyze via Backend (Picker) — forwards to panel with sendPath=true
+    context.subscriptions.push(vscode.commands.registerCommand("multiModalDebug.analyzeBackend", async () => {
+        ChatPanel.createOrShow(context);
+        await ChatPanel.postMessage({ type: "analyze", sendPath: true });
+    }));
+    // Command Palette helpers for panel actions
+    context.subscriptions.push(vscode.commands.registerCommand("multiModalDebug.previewReport", async () => {
+        ChatPanel.createOrShow(context);
+        await ChatPanel.postMessage({ type: "previewReport" });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("multiModalDebug.openLocation", async () => {
+        ChatPanel.createOrShow(context);
+        await ChatPanel.postMessage({ type: "openLocation" });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("multiModalDebug.savePatch", async () => {
+        ChatPanel.createOrShow(context);
+        await ChatPanel.postMessage({ type: "savePatch" });
+    }));
+    // NEW: Apply Patch
+    context.subscriptions.push(vscode.commands.registerCommand("multiModalDebug.applyPatch", async () => {
+        ChatPanel.createOrShow(context);
+        await ChatPanel.postMessage({ type: "applyPatch" });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("multiModalDebug.saveTest", async () => {
+        ChatPanel.createOrShow(context);
+        await ChatPanel.postMessage({ type: "saveTest" });
+    }));
+    // NEW: Insert Test
+    context.subscriptions.push(vscode.commands.registerCommand("multiModalDebug.insertTest", async () => {
+        ChatPanel.createOrShow(context);
+        await ChatPanel.postMessage({ type: "insertTest" });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("multiModalDebug.copyRCA", async () => {
+        ChatPanel.createOrShow(context);
+        await ChatPanel.postMessage({ type: "copyRCA" });
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand("multiModalDebug.clearHistory", async () => {
+        ChatPanel.createOrShow(context);
+        await ChatPanel.postMessage({ type: "clearHistory" });
+    }));
 }
 function deactivate() { }
 /** Settings helpers */
@@ -279,41 +319,40 @@ function makeIncidentMarkdown(data, sourcePath) {
     const rca = typeof data === "string" ? data : data?.rca ?? data;
     const patch = data?.patch ?? null;
     const test = data?.test ?? null;
+    const exception = data?.exception ?? null;
+    const file = data?.file ?? (sourcePath || null);
+    const note = data?._note || data?.note || null;
+    const context = Array.isArray(data?.context) ? data.context : null;
     const now = new Date();
     const ts = now.toISOString();
     const src = sourcePath ?? "(unknown)";
-    return [
+    const headerLines = [
         `# Incident Report`,
         ``,
         `- **Timestamp:** ${ts}`,
         `- **Source:** \`${src}\``,
-        ``,
-        `## Root Cause Analysis`,
-        "```text",
-        typeof rca === "string" ? rca : JSON.stringify(rca, null, 2),
-        "```",
-        ``,
-        patch
-            ? [
-                `## Suggested Patch`,
-                "```diff",
-                typeof patch === "string" ? patch : JSON.stringify(patch, null, 2),
-                "```",
-                ``,
-            ].join("\n")
-            : "",
-        test
-            ? [
-                `## Suggested Test`,
-                "```",
-                typeof test === "string" ? test : JSON.stringify(test, null, 2),
-                "```",
-                ``,
-            ].join("\n")
-            : "",
-    ]
-        .filter(Boolean)
-        .join("\n");
+    ];
+    if (exception || file || note) {
+        headerLines.push(`- **Summary:**`);
+        if (exception)
+            headerLines.push(`  - Exception: \`${exception}\``);
+        if (file)
+            headerLines.push(`  - Location: \`${file}\``);
+        if (note)
+            headerLines.push(`  - Note: ${note}`);
+    }
+    const sections = [];
+    sections.push(`## Root Cause Analysis`, "```text", typeof rca === "string" ? rca : JSON.stringify(rca, null, 2), "```", ``);
+    if (context && context.length) {
+        sections.push(`## Context`, "```text", context.join("\n"), "```", ``);
+    }
+    if (patch) {
+        sections.push(`## Suggested Patch`, "```diff", typeof patch === "string" ? patch : JSON.stringify(patch, null, 2), "```", ``);
+    }
+    if (test) {
+        sections.push(`## Suggested Test`, "```", typeof test === "string" ? test : JSON.stringify(test, null, 2), "```", ``);
+    }
+    return [...headerLines, ...sections].filter(Boolean).join("\n");
 }
 class ChatPanel {
     static getLastAnalysis() {
@@ -351,6 +390,11 @@ class ChatPanel {
         this.panel.webview.postMessage({ type: "analysisResult", path: e.path, body: e.body });
         this.status(`history: ${idx + 1}/${this.history.length}`);
     }
+    clearHistory() {
+        this.history = [];
+        this.historyIndex = -1;
+        this.lastAnalysis = undefined;
+    }
     constructor(panel, extensionUri) {
         this.panel = panel;
         this.extensionUri = extensionUri;
@@ -361,6 +405,23 @@ class ChatPanel {
         this.panel.webview.onDidReceiveMessage(async (msg) => {
             try {
                 switch (msg?.type) {
+                    case "copyRCA": {
+                        const body = this.lastAnalysis?.body;
+                        const rcaText = typeof body?.rca === "string" ? body.rca : (body?.rca ? JSON.stringify(body.rca, null, 2) : undefined);
+                        if (!rcaText) {
+                            this.status("copyRCA: no rca to copy");
+                            break;
+                        }
+                        await vscode.env.clipboard.writeText(rcaText);
+                        vscode.window.showInformationMessage("RCA copied to clipboard.");
+                        this.status("copyRCA: copied");
+                        break;
+                    }
+                    case "clearHistory": {
+                        this.clearHistory();
+                        this.status("history cleared");
+                        break;
+                    }
                     case "readFile": {
                         const uri = await pickFileToRead();
                         if (!uri)
@@ -488,7 +549,7 @@ class ChatPanel {
                                 break;
                             }
                             const doc = await vscode.workspace.openTextDocument(docUri);
-                            const ed = await vscode.window.showTextDocument(doc, { preview: false });
+                            const ed = await vscode.window.showTextDocument(doc, { preview: true });
                             const pos = new vscode.Position(Math.max(0, line), 0);
                             ed.selection = new vscode.Selection(pos, pos);
                             ed.revealRange(new vscode.Range(pos, pos), vscode.TextEditorRevealType.InCenter);
@@ -505,7 +566,7 @@ class ChatPanel {
                         }
                         const md = makeIncidentMarkdown(this.lastAnalysis.body, this.lastAnalysis.path);
                         const doc = await vscode.workspace.openTextDocument({ content: md, language: "markdown" });
-                        await vscode.window.showTextDocument(doc, { preview: false });
+                        await vscode.window.showTextDocument(doc, { preview: true });
                         this.status("preview: opened Markdown report");
                         break;
                     }
@@ -536,6 +597,72 @@ class ChatPanel {
                         this.status("patch: saved");
                         break;
                     }
+                    // --- inserted new cases for applyPatch and insertTest ---
+                    case "applyPatch": {
+                        const patch = this.lastAnalysis?.body?.patch;
+                        if (!patch) {
+                            this.status("apply-patch: none available");
+                            break;
+                        }
+                        const ws = vscode.workspace.workspaceFolders?.[0]?.uri;
+                        if (!ws) {
+                            this.status("apply-patch: no workspace open");
+                            break;
+                        }
+                        const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
+                        const patchesDir = vscode.Uri.joinPath(ws, "patches");
+                        try {
+                            await vscode.workspace.fs.createDirectory(patchesDir);
+                        }
+                        catch { }
+                        const patchUri = vscode.Uri.joinPath(patchesDir, `suggested_${stamp}.patch`);
+                        await vscode.workspace.fs.writeFile(patchUri, Buffer.from(String(patch)));
+                        const term = vscode.window.createTerminal({ name: "OurProject-1: apply patch", cwd: ws.fsPath });
+                        term.show();
+                        term.sendText(`git apply --reject --whitespace=fix "${patchUri.fsPath}"`);
+                        vscode.window.showInformationMessage(`Saved patch → ${patchUri.fsPath}. Running 'git apply' in terminal.`);
+                        this.status("apply-patch: invoked git apply");
+                        break;
+                    }
+                    case "insertTest": {
+                        const test = this.lastAnalysis?.body?.test;
+                        if (!test) {
+                            this.status("insert-test: none available");
+                            break;
+                        }
+                        const ws = vscode.workspace.workspaceFolders?.[0]?.uri;
+                        let target;
+                        const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");
+                        if (ws) {
+                            // Prefer backend/tests if it exists; else tests/
+                            let testsDir = vscode.Uri.joinPath(ws, "backend", "tests");
+                            try {
+                                await vscode.workspace.fs.stat(testsDir);
+                            }
+                            catch {
+                                testsDir = vscode.Uri.joinPath(ws, "tests");
+                            }
+                            try {
+                                await vscode.workspace.fs.createDirectory(testsDir);
+                            }
+                            catch { }
+                            target = vscode.Uri.joinPath(testsDir, `rca_test_${stamp}.py`);
+                        }
+                        else {
+                            target = await vscode.window.showSaveDialog({ saveLabel: "Save Test", filters: { Python: ["py"], All: ["*"] } });
+                            if (!target) {
+                                this.status("insert-test:cancelled");
+                                break;
+                            }
+                        }
+                        await vscode.workspace.fs.writeFile(target, Buffer.from(String(test)));
+                        const doc = await vscode.workspace.openTextDocument(target);
+                        await vscode.window.showTextDocument(doc, { preview: true });
+                        vscode.window.showInformationMessage(`Inserted test → ${target.fsPath}`);
+                        this.status("insert-test: saved & opened");
+                        break;
+                    }
+                    // --- end new cases ---
                     case "saveTest": {
                         const test = this.lastAnalysis?.body?.test;
                         if (!test) {
@@ -730,9 +857,12 @@ class ChatPanel {
       <button id="btn-open-loc">Open Location</button>
       <button id="btn-preview">Preview Report</button>
       <button id="btn-copy">Copy Analysis</button>
+      <button id="btn-copy-rca">Copy RCA</button>
       <button id="btn-save">Save Report</button>
       <button id="btn-save-patch">Save Patch</button>
+      <button id="btn-apply-patch">Apply Patch</button>
       <button id="btn-save-test">Save Test</button>
+      <button id="btn-insert-test">Insert Test</button>
       <button id="btn-clear">Clear</button>
       <label style="margin-left:auto; display:flex; align-items:center; gap:6px;">
         <input type="checkbox" id="opt-send-path">
@@ -797,6 +927,9 @@ class ChatPanel {
     document.getElementById('btn-copy').addEventListener('click', () => {
       vscode.postMessage({ type: 'copyAnalysis' });
     });
+    document.getElementById('btn-copy-rca').addEventListener('click', () => {
+      vscode.postMessage({ type: 'copyRCA' });
+    });
 
     document.getElementById('btn-save').addEventListener('click', () => {
       vscode.postMessage({ type: 'saveReport' });
@@ -811,11 +944,18 @@ class ChatPanel {
     document.getElementById('btn-save-patch').addEventListener('click', () => {
       vscode.postMessage({ type: 'savePatch' });
     });
+    document.getElementById('btn-apply-patch').addEventListener('click', () => {
+      vscode.postMessage({ type: 'applyPatch' });
+    });
     document.getElementById('btn-save-test').addEventListener('click', () => {
       vscode.postMessage({ type: 'saveTest' });
     });
+    document.getElementById('btn-insert-test').addEventListener('click', () => {
+      vscode.postMessage({ type: 'insertTest' });
+    });
     document.getElementById('btn-clear').addEventListener('click', () => {
       out.value = '';
+      vscode.postMessage({ type: 'clearHistory' });
     });
     document.getElementById('btn-prev').addEventListener('click', () => {
       vscode.postMessage({ type: 'historyPrev' });

@@ -1,5 +1,3 @@
-
-
 """
 Service Handlers (optional)
 --------------------------

@@ -1,5 +1,23 @@
 # Multi-Modal Debugging Agent
 
+## Quickstart Demo
+
+
+# 1) create & activate venv
+python -m venv .venv && source .venv/bin/activate
+
+# 2) install deps
+pip install -r requirements.txt
+
+# 3) start backend (choose one)
+python main.py
+# or
+uvicorn backend.app.main:app --reload
+
+# 4) run the demo (new terminal, same venv)
+python run_demo.py
+
+
 ## Overview
 The Multi-Modal Debugging Agent is a project designed to facilitate debugging across multiple modalities. It provides a backend service that handles API requests, orchestrates various components, and manages data models and worker processes. Additionally, it includes a VS Code extension to enhance the debugging experience.
 

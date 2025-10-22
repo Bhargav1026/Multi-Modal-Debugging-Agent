@@ -2,7 +2,7 @@
   "name": "multi-modal-debugging-agent",
   "displayName": "Multi-Modal Debugging Agent",
   "publisher": "your-publisher-id",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Other"],
   "main": "./out/extension.js",
@@ -14,7 +14,15 @@
     "onCommand:multiModalDebug.analyzeBackend",
     "onCommand:multiModalDebug.analyzeActive",
     "onCommand:multiModalDebug.copyAnalysis",
-    "onCommand:multiModalDebug.saveAnalysis"
+    "onCommand:multiModalDebug.saveAnalysis",
+    "onCommand:multiModalDebug.previewReport",
+    "onCommand:multiModalDebug.openLocation",
+    "onCommand:multiModalDebug.savePatch",
+    "onCommand:multiModalDebug.saveTest",
+    "onCommand:multiModalDebug.copyRCA",
+    "onCommand:multiModalDebug.clearHistory",
+    "onCommand:multiModalDebug.runTests",
+    "onCommand:multiModalDebug.runCommand"
   ],
   "contributes": {
     "commands": [
@@ -22,10 +30,18 @@
       { "command": "multiModalDebug.readFile", "title": "OurProject-1: Read File", "category": "OurProject-1" },
       { "command": "multiModalDebug.writeFile", "title": "OurProject-1: Write File", "category": "OurProject-1" },
       { "command": "multiModalDebug.overwriteFile", "title": "OurProject-1: Overwrite File", "category": "OurProject-1" },
-      { "command": "multiModalDebug.analyzeBackend", "title": "OurProject-1: Analyze via Backend", "category": "OurProject-1" },
+      { "command": "multiModalDebug.analyzeBackend", "title": "OurProject-1: Analyze via Backend (Picker)", "category": "OurProject-1" },
       { "command": "multiModalDebug.analyzeActive", "title": "OurProject-1: Analyze Active Editor", "category": "OurProject-1" },
-      { "command": "multiModalDebug.copyAnalysis", "title": "OurProject-1: Copy Analysis", "category": "OurProject-1" },
-      { "command": "multiModalDebug.saveAnalysis", "title": "OurProject-1: Save Analysis", "category": "OurProject-1" }
+      { "command": "multiModalDebug.copyAnalysis", "title": "OurProject-1: Copy Full Analysis (JSON)", "category": "OurProject-1" },
+      { "command": "multiModalDebug.saveAnalysis", "title": "OurProject-1: Save Incident Report (Markdown)", "category": "OurProject-1" },
+      { "command": "multiModalDebug.previewReport", "title": "OurProject-1: Preview Incident Report", "category": "OurProject-1" },
+      { "command": "multiModalDebug.openLocation", "title": "OurProject-1: Open Suspected Location", "category": "OurProject-1" },
+      { "command": "multiModalDebug.savePatch", "title": "OurProject-1: Save Suggested Patch", "category": "OurProject-1" },
+      { "command": "multiModalDebug.saveTest", "title": "OurProject-1: Save Suggested Test", "category": "OurProject-1" },
+      { "command": "multiModalDebug.copyRCA", "title": "OurProject-1: Copy RCA Text", "category": "OurProject-1" },
+      { "command": "multiModalDebug.clearHistory", "title": "OurProject-1: Clear Panel History", "category": "OurProject-1" },
+      { "command": "multiModalDebug.runTests", "title": "OurProject-1: Run Tests (backend)", "category": "OurProject-1" },
+      { "command": "multiModalDebug.runCommand", "title": "OurProject-1: Run Command (backend)", "category": "OurProject-1" }
     ],
     "configuration": {
       "type": "object",
@@ -50,56 +66,52 @@
         "multiModalDebug.backendUrl": {
           "type": "string",
           "default": "",
-          "markdownDescription": "DEPRECATED: Use `multiModalDebug.backendBase` instead. If set, it overrides `backendBase` for backward compatibility."
+          "markdownDescription": "**DEPRECATED**: Use `multiModalDebug.backendBase` instead. If set, it overrides `backendBase` for backward compatibility."
         }
       }
     },
     "menus": {
       "editor/title": [
-        {
-          "command": "multiModalDebug.analyzeActive",
-          "group": "navigation@1",
-          "when": "editorTextFocus"
-        },
-        {
-          "command": "multiModalDebug.openChat",
-          "group": "navigation@9"
-        }
+        { "command": "multiModalDebug.analyzeActive", "group": "navigation@1", "when": "editorTextFocus" },
+        { "command": "multiModalDebug.openChat", "group": "navigation@9" },
+        { "command": "multiModalDebug.previewReport", "group": "navigation@10" },
+        { "command": "multiModalDebug.openLocation", "group": "navigation@11" }
       ],
       "editor/context": [
-        {
-          "command": "multiModalDebug.analyzeActive",
-          "group": "navigation",
-          "when": "editorTextFocus"
-        }
+        { "command": "multiModalDebug.analyzeActive", "group": "navigation", "when": "editorTextFocus" },
+        { "command": "multiModalDebug.previewReport", "group": "navigation" },
+        { "command": "multiModalDebug.openLocation", "group": "navigation" }
+      ],
+      "commandPalette": [
+        { "command": "multiModalDebug.openChat", "when": "true" },
+        { "command": "multiModalDebug.analyzeBackend", "when": "true" },
+        { "command": "multiModalDebug.analyzeActive", "when": "true" },
+        { "command": "multiModalDebug.previewReport", "when": "true" },
+        { "command": "multiModalDebug.openLocation", "when": "true" },
+        { "command": "multiModalDebug.savePatch", "when": "true" },
+        { "command": "multiModalDebug.saveTest", "when": "true" },
+        { "command": "multiModalDebug.copyAnalysis", "when": "true" },
+        { "command": "multiModalDebug.copyRCA", "when": "true" },
+        { "command": "multiModalDebug.saveAnalysis", "when": "true" },
+        { "command": "multiModalDebug.clearHistory", "when": "true" },
+        { "command": "multiModalDebug.runTests", "when": "true" },
+        { "command": "multiModalDebug.runCommand", "when": "true" }
       ]
     },
     "keybindings": [
-      {
-        "command": "multiModalDebug.openChat",
-        "mac": "shift+cmd+alt+o",
-        "when": "true"
-      },
-      {
-        "command": "multiModalDebug.analyzeActive",
-        "mac": "shift+cmd+alt+a",
-        "when": "editorTextFocus"
-      },
-      {
-        "command": "multiModalDebug.analyzeBackend",
-        "mac": "shift+cmd+alt+l",
-        "when": "true"
-      },
-      {
-        "command": "multiModalDebug.copyAnalysis",
-        "mac": "shift+cmd+alt+c",
-        "when": "true"
-      },
-      {
-        "command": "multiModalDebug.saveAnalysis",
-        "mac": "shift+cmd+alt+r",
-        "when": "true"
-      }
+      { "command": "multiModalDebug.openChat", "mac": "shift+cmd+alt+o", "key": "shift+ctrl+alt+o", "when": "true" },
+      { "command": "multiModalDebug.analyzeActive", "mac": "shift+cmd+alt+a", "key": "shift+ctrl+alt+a", "when": "editorTextFocus" },
+      { "command": "multiModalDebug.analyzeBackend", "mac": "shift+cmd+alt+l", "key": "shift+ctrl+alt+l", "when": "true" },
+      { "command": "multiModalDebug.copyAnalysis", "mac": "shift+cmd+alt+c", "key": "shift+ctrl+alt+c", "when": "true" },
+      { "command": "multiModalDebug.saveAnalysis", "mac": "shift+cmd+alt+r", "key": "shift+ctrl+alt+r", "when": "true" },
+      { "command": "multiModalDebug.previewReport", "mac": "shift+cmd+alt+p", "key": "shift+ctrl+alt+p", "when": "true" },
+      { "command": "multiModalDebug.openLocation", "mac": "shift+cmd+alt+g", "key": "shift+ctrl+alt+g", "when": "true" },
+      { "command": "multiModalDebug.savePatch", "mac": "shift+cmd+alt+1", "key": "shift+ctrl+alt+1", "when": "true" },
+      { "command": "multiModalDebug.saveTest", "mac": "shift+cmd+alt+2", "key": "shift+ctrl+alt+2", "when": "true" },
+      { "command": "multiModalDebug.copyRCA", "mac": "shift+cmd+alt+x", "key": "shift+ctrl+alt+x", "when": "true" },
+      { "command": "multiModalDebug.clearHistory", "mac": "shift+cmd+alt+backspace", "key": "shift+ctrl+alt+backspace", "when": "true" },
+      { "command": "multiModalDebug.runTests", "mac": "shift+cmd+alt+t", "key": "shift+ctrl+alt+t", "when": "true" },
+      { "command": "multiModalDebug.runCommand", "mac": "shift+cmd+alt+m", "key": "shift+ctrl+alt+m", "when": "true" }
     ]
   },
   "scripts": {

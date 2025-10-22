@@ -1,0 +1,7 @@
+{
+  "title": "Login 500s after DB outage",
+  "description": "Users see intermittent 500s on /login.",
+  "artifacts": {
+    "logs_path": "examples/demo_incident/sample_app.log"
+  }
+}
