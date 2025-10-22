@@ -2,8 +2,7 @@
 title: "Multi-Modal Debugging Agent: An Intelligent Tool for Debugging Across Modalities"
 authors:
   - name: Bhargava Sai Vardhan Gunapu
-    affiliation: University of North Texas (UNT)
-    orcid: 0000-0002-XXXX-XXXX
+    affiliation: University of North Texas, USA
   - name: Vidya Vathi Gorji
     affiliation: Terralogic, India
   - name: Devi Pravallika Gunapu
@@ -13,55 +12,55 @@ date: 2024-06-01
 
 # Summary
 
-Debugging software is a critical and often time-consuming aspect of the software development lifecycle. Traditional debugging tools primarily rely on textual logs and breakpoints, which may not sufficiently capture the complexity of modern multi-modal applications involving text, images, and other data types. The *Multi-Modal Debugging Agent* (MMDA) is an intelligent software tool designed to assist developers in diagnosing and resolving bugs by leveraging multiple modalities of data, including code, logs, screenshots, and user interactions. MMDA integrates advanced natural language processing and computer vision techniques to provide contextualized debugging assistance, enabling quicker identification of issues and more effective solutions.
+Debugging is a time-consuming and essential part of software development. Traditional tools depend mostly on text-based logs and breakpoints, which often fail to capture the complexity of modern multi-modal systems that integrate text, images, and other forms of data. The Multi-Modal Debugging Agent (MMDA) assists developers in diagnosing and resolving bugs by processing different types of input—code, logs, screenshots, and user interactions. By combining advances in natural language processing and computer vision, MMDA provides contextual debugging support that helps identify issues more quickly and efficiently.
 
 # Statement of Need
 
-As software systems become increasingly complex and multi-modal, conventional debugging approaches struggle to keep pace with the diverse data sources involved. Developers often face challenges in correlating information across different modalities, such as linking error messages to visual UI states or user actions. Existing tools lack the capability to process and analyze these heterogeneous data types cohesively. MMDA addresses this gap by offering a unified platform that interprets and synthesizes multi-modal inputs to enhance the debugging process. This tool is especially valuable for developers working on applications with rich user interfaces, embedded systems, and AI-driven features where multi-modal data is prevalent.
+Modern software frequently integrates multiple data modalities, making debugging more complex. Developers often struggle to link information across formats—such as connecting error logs with visual UI states or user actions. Existing tools rarely handle these heterogeneous data types in a unified way. MMDA fills this gap by offering a single framework that interprets and synthesizes multi-modal inputs. It is particularly useful for developers building applications with rich interfaces, embedded systems, and AI-driven features.
 
 # Software Description
 
-MMDA is implemented as a modular software agent that accepts various input forms related to a debugging session:
+MMDA is implemented as a modular software agent that accepts different forms of input during a debugging session:
 
-- **Textual inputs:** source code snippets, error logs, stack traces, and developer queries.
-- **Visual inputs:** screenshots, UI mockups, and video captures of user interactions.
-- **Interactive inputs:** user annotations and feedback.
+- Textual inputs: Source code snippets, stack traces, error logs, and developer queries  
+- Visual inputs:  Screenshots, UI mockups, and video recordings of user interactions  
+- Interactive inputs: User annotations and feedback
 
-The core of MMDA consists of:
+Its core includes:
+- A **multi-modal encoder** that merges textual and visual information into a unified representation  
+- A **reasoning engine** that uses rule-based logic and machine learning to identify likely bug causes  
+- A **user interface** that presents insights, recommendations, and suggested fixes in a clear format  
 
-- A **multi-modal encoder** that fuses textual and visual data into a unified representation.
-- An **intelligent reasoning engine** that applies rule-based and machine learning models to identify probable causes of bugs.
-- A **user interface** that presents insights, suggestions, and potential fixes in an accessible manner.
+MMDA also includes a Root Cause Analysis (RCA) pipeline for systematic diagnosis, a sandbox environment for safe testing of fixes, and an orchestration graph to manage communication between modules. These components together create an integrated debugging workflow. The system is compatible with common development environments and version control systems for easy integration.
 
-Additionally, MMDA includes key components such as the Root Cause Analysis (RCA) pipeline for systematically diagnosing issues, a sandbox environment for safely testing and validating potential fixes, and an orchestration graph that manages the workflow and integration between various modules. These components work together to provide a comprehensive and interactive debugging experience.
-
-MMDA supports integration with popular development environments and version control systems, enabling seamless adoption in existing workflows.
 
 # Illustrative Example
 
-Consider a developer debugging a mobile application that crashes intermittently when a certain button is pressed. Using MMDA, the developer submits the relevant code segment, a screenshot of the app at the point of failure, and the error log. MMDA processes these inputs, detects an inconsistency between the UI state and the expected behavior encoded in the source, and suggests that a null pointer exception might be triggered due to an uninitialized variable. It further recommends a code patch to initialize the variable and provides links to relevant documentation. This multi-modal approach accelerates bug identification and resolution compared to traditional log-only debugging.
+Take an example of a developer of a mobile application that is crashing intermittently when a particular button is pressed. When the developer is using MMDA, they add the corresponding code segment, a screen shot of the app when the failure occurred, and the log. MMDA works out these inputs, and identifies a mismatch between the state of the UI and the predicted behaviour of the source, and proposes that a null pointer exception could be caused by an uninitialised variable. It also suggests a patch to the code in order to set the variable and has links to documentation on the pertinent. This multi-modal method detects and fixes bugs much faster than the conventional log-only debugging.
 
 # Quality Assurance
 
-MMDA has undergone rigorous testing including:
+MMDA has been subjected to certain tests including:
 
-- **Unit tests** covering all core modules to ensure correctness of multi-modal data processing.
-- **Integration tests** validating end-to-end workflows with synthetic and real-world debugging scenarios.
-- **User studies** involving professional developers who reported improved debugging efficiency and satisfaction.
-- Continuous benchmarking against state-of-the-art debugging tools demonstrated MMDA’s superior ability to handle multi-modal data and provide actionable insights.
+- **Unit tests** of all core modules that are to verify that the multi-modal data processing is correct.
+- **End-to-end verification/test** of end-to-end workflows with synthetic and real-world debugging.
+- **User studies** of professional developers who said they had more efficient and satisfying debugging.
+- Ongoing comparisons with the state-of-the-art debugging tools proved the superiority of MMDA that is able to process multi-modal data and deliver the actionable information.
 
-The software is maintained under version control with continuous integration pipelines to ensure ongoing reliability and performance.
+The software is version controlled and has continuous integration pipelines to facilitate the continuity of reliability and performance.
 
 # Impact and Reuse
 
-By enabling developers to leverage multi-modal data effectively, MMDA has the potential to significantly reduce debugging time and improve software quality. It fosters cross-disciplinary collaboration by integrating insights from natural language processing and computer vision into software engineering. MMDA’s modular architecture and open APIs encourage extension and customization for diverse application domains. Researchers and practitioners can reuse MMDA components for related tasks such as automated testing, user behavior analysis, and software maintenance.
+MMDA can help developers save a lot of debugging and time as well as make software quality better by allowing developers to use multi-modal data appropriately. It promotes interdisciplinary relationships between fields as it combines natural language processing and computer vision knowledge to software engineering. The modular structure of MMDA and open APIs promote extension and customization to various areas of application. MMDA parts can also be reused by researchers and practitioners in similar tasks, including automated testing, user behavior analysis and software maintenance.
 
 # Author Contributions
 
-- **Bhargava Sai Vardhan Gunapu:** Lead architecture design, Root Cause Analysis (RCA) pipeline development, sandbox environment implementation, orchestration graph construction, FastAPI backend development, and documentation.
-- **Vidya Vathi Gorji:** Development of the VS Code extension, frontend-backend integration, demo workflow design, and comprehensive testing.
-- **Devi Pravallika Gunapu:** Evaluation, quality assurance, reproducibility testing, and preparation of technical documentation.
+- **Bhargava Sai Vardhan Gunapu:** Lead architecture design, RCA pipeline, sandbox environment, orchestration graph, FastAPI backend, and documentation.  
+- **Vidya Vathi Gorji:** VS Code extension development, frontend–backend integration, demo workflow design, and extensive testing.  
+- **Devi Pravallika Gunapu:** Evaluation, quality assurance, reproducibility testing, and technical documentation preparation.
 
 # Acknowledgements
 
-The authors thank the University of North Texas for supporting this research and the participating developers for their valuable feedback. We also acknowledge the open-source communities whose tools and libraries facilitated the development of MMDA.
+The researchers thank the University of North Texas for supporting this study and the valuable feedback of the research developers. It is also important to note that the development of MMDA owes a lot to open-source communities whose tools and libraries made the creation of MMDA possible.
+
+An archived version of this software is available at Zenodo (DOI: [10.5281/zenodo.17411418](https://doi.org/10.5281/zenodo.17411418)).
