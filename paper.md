@@ -7,7 +7,8 @@ authors:
     affiliation: Terralogic, India
   - name: Devi Pravallika Gunapu
     affiliation: Cotality, USA
-date: 2024-06-01
+date: 2025-10-26
+bibliography: paper.bib
 ---
 
 # Summary
