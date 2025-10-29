@@ -1,13 +1,13 @@
 ---
 title: "Multi-Modal Debugging Agent: An Intelligent Tool for Debugging Across Modalities"
 authors:
-  - name: Bhargava Sai Vardhan Gunapu
-    affiliation: University of North Texas, USA
-  - name: Vidya Vathi Gorji
-    affiliation: Terralogic, India
-  - name: Devi Pravallika Gunapu
-    affiliation: Cotality, USA
-date: 2025-10-26
+  - name: "Bhargava Sai Vardhan Gunapu"
+    affiliation: "University of North Texas, USA"
+  - name: "Vidya Vathi Gorji"
+    affiliation: "Terralogic, India"
+  - name: "Devi Pravallika Gunapu"
+    affiliation: "Cotality, USA"
+date: 2025-10-29
 bibliography: paper.bib
 ---
 
