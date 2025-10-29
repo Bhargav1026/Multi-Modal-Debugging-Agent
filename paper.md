@@ -65,3 +65,5 @@ MMDA can help developers save a lot of debugging and time as well as make softwa
 The researchers thank the University of North Texas for supporting this study and the valuable feedback of the research developers. It is also important to note that the development of MMDA owes a lot to open-source communities whose tools and libraries made the creation of MMDA possible.
 
 An archived version of this software is available at Zenodo (DOI: [10.5281/zenodo.17411418](https://doi.org/10.5281/zenodo.17411418)).
+
+# References
